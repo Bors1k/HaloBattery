@@ -540,6 +540,24 @@ Byte 3 is the charger state: `0x00` on battery and `0x04` with the cable in, the
 
 **Confirmed on hardware by @notisv** on the second test build: the icon showed the level continuously (`reply: 0e a1 5c 00` = 92 %), agreed with Bluetooth, Windows and Command Center at the same time, and the charging state followed the cable in and out. They kept it running for over an hour before reporting.
 
+### Razer Barracuda X Chroma (2.4 GHz)
+
+**Connection:** 2.4 GHz receiver (`1532:0574`, MediaTek)
+
+The protocol was decoded from `file.pcapng`, a USBPcap capture supplied by the device
+owner while Razer Synapse refreshed the battery page. The receiver's `ff14:0001`
+collection uses 64-byte report-id `0x02` frames. A request contains `02 00 60`, payload
+length `04` at byte 6, marker `80` at byte 9 and the command at byte 10. Synapse sends
+command `0x21` for battery and `0x2A` for charging. Replies contain `02 02 60`, echo the
+command at byte 11, contain `01 01` at bytes 12-13, and return the one-byte value at
+byte 14. The capture returned `0x60` (96%) for battery and `0x00` for not charging.
+The checksum at byte 62 is XOR of request bytes 0 through 61.
+
+This MediaTek format is distinct from both the PA protocol used by other Razer headsets
+and the Airoha RACE protocol used by the Barracuda X (2022). **Confirmed on hardware**
+with `--probe`: the provider returned 96%, not charging, matching the capture, and the
+summary displayed the headset.
+
 ### Razer Barracuda X (2022) (2.4 GHz)
 
 **Connection:** 2.4 GHz dongle (1532:0552, "Razer Barracuda X 2.4", Macronix bridge)

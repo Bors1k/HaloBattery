@@ -38,6 +38,7 @@ RAZER_VID = 0x1532
 KNOWN = {
     0x0528: ("Razer BlackShark V2 Pro (2020)", 0x3F),
     0x0536: ("Razer Barracuda X (2022)", 0x1F),
+    0x0574: ("Razer Barracuda X Chroma", 0x1F),
     0x0555: ("Razer BlackShark V2 Pro (2023)", 0x3F),
     0x0556: ("Razer BlackShark V2 Pro (2023)", 0x3F),
     0x0557: ("Razer BlackShark V2 Pro (2023)", 0x3F),
@@ -395,6 +396,10 @@ class RazerProvider(Provider):
                 # collection refuses the PA writes outright ("Incorrect function", #287),
                 # so providers/barracuda_x.py reads it.
                 self._diag.append("  skipped: read by the barracuda_x provider (Airoha RACE)")
+                continue
+            if pid == 0x0574:
+                # The Barracuda X Chroma uses its captured MediaTek protocol on ff14:0001.
+                self._diag.append("  skipped: read by the barracuda_chroma provider")
                 continue
             if pid == 0x053A:
                 # The Barracuda Pro's receiver does not answer the mouse request this

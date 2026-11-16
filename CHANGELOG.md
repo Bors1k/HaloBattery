@@ -6,6 +6,13 @@ and the project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- **Razer Barracuda X Chroma** (`1532:0574`, 2.4 GHz receiver) battery level and
+  charging state through its captured MediaTek HID protocol. A Synapse USBPcap
+  capture returned 96% and not charging. Confirmed on the headset with `--probe`:
+  both values matched the capture and the summary displayed the device.
+
 ## [1.17.0] - 2026-11-12
 
 First combined upstream release after the community fork. Includes six interface

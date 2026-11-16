@@ -76,6 +76,7 @@ MESSAGES = {
     "provider.asus": "Ratones ASUS ROG / TUF, teclados, auriculares",
     "provider.audeze": "Audeze Maxwell",
     "provider.barracuda": "Razer Barracuda Pro",
+    "provider.barracuda_chroma": "Razer Barracuda X Chroma",
     "provider.barracuda_x": "Razer Barracuda X",
     "provider.corsair": "Auriculares Corsair",
     "provider.dji": "DJI Mic Mini 2",

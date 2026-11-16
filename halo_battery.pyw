@@ -141,7 +141,7 @@ from halo import flyout, history, icons, updates, whatsnew, winevents  # noqa: E
 from halo import i18n, tray_dpi  # noqa: E402
 from providers import hidlist  # noqa: E402
 from providers import (AmInfinityProvider, AstroProvider, AsusProvider,  # noqa: E402
-                       AudezeProvider, BarracudaProvider, BarracudaXProvider, BluetoothProvider, CorsairProvider,
+                       AudezeProvider, BarracudaChromaProvider, BarracudaProvider, BarracudaXProvider, BluetoothProvider, CorsairProvider,
                        DeviceStatus, DjiProvider,
                        EightBitDoProvider,
                        GWolvesProvider, HyperXAlpha2Provider, HyperXCloud3Provider, HyperXCloud3SProvider,
@@ -204,6 +204,7 @@ PROVIDER_LABELS = {
     "audeze": "Audeze Maxwell",
     "aula": "AULA F87 Pro V2C keyboards",
     "barracuda": "Razer Barracuda Pro",
+    "barracuda_chroma": "Razer Barracuda X Chroma",
     "barracuda_x": "Razer Barracuda X",
     "corsair": "Corsair headsets",
     "dji": "DJI Mic Mini 2",
@@ -261,7 +262,7 @@ def make_providers(jbl_listen_first: float = 0.0) -> list:
             HyperXAlpha2Provider(), HyperXCloud3Provider(), HyperXProvider(),
             KeychronProvider(), PulsarProvider(),
             JblProvider(listen_first=jbl_listen_first), LogitechProvider(), SteelSeriesProvider(), XInputProvider(),
-            PlayStationProvider(), EightBitDoProvider(), BarracudaProvider(), BarracudaXProvider(), NintendoProvider(),
+            PlayStationProvider(), EightBitDoProvider(), BarracudaProvider(), BarracudaChromaProvider(), BarracudaXProvider(), NintendoProvider(),
             AsusProvider(), GWolvesProvider(), AulaProvider(), LofreeProvider(), AstroProvider(), CorsairProvider(),
             LamzuProvider(), VaxeeProvider(), AmInfinityProvider(),
             SteelSeriesEliteProvider(), LogitechCenturionProvider(), HyperXCloud3SProvider(), NzxtProvider(),

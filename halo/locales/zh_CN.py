@@ -68,6 +68,7 @@ MESSAGES = {
     "provider.asus": "ASUS ROG / TUF 鼠标、键盘、耳机",
     "provider.audeze": "Audeze Maxwell",
     "provider.barracuda": "Razer Barracuda Pro",
+    "provider.barracuda_chroma": "Razer Barracuda X Chroma",
     "provider.barracuda_x": "Razer Barracuda X",
     "provider.corsair": "Corsair 耳机",
     "provider.dji": "DJI Mic Mini 2",
