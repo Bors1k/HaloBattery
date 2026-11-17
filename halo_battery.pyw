@@ -1972,6 +1972,8 @@ class App:
                 p.switch_bluetooth = bool(self.cfg.get("playstation_full_mode", False))
             if isinstance(p, AtkKeyboardProvider):
                 p.activity.wake = self.wake.set
+            if isinstance(p, KeychronProvider):
+                p.bluetooth.wake = self.wake.set
             try:
                 found = p.poll()
             except Exception:
@@ -2625,7 +2627,7 @@ class App:
     def quit(self):
         self.stop_evt.set()
         for provider in self.providers:
-            if isinstance(provider, AtkKeyboardProvider):
+            if isinstance(provider, (AtkKeyboardProvider, KeychronProvider)):
                 provider.close()
         self.history.save(force=True)
         if self.cfg.get("status_file"):

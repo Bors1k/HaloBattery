@@ -4,6 +4,7 @@ __pycache__/
 *.egg-info/
 .venv/
 venv/
+keychrone_k2_pro/
 
 # PyInstaller (scripts/build_exe.bat)
 build/

@@ -8,6 +8,13 @@ and the project follows [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **Keychron K2 Pro ANSI RGB** (`3434:0220`) with the supplied battery-reporting QMK
+  firmware. Over USB, Halo Battery queries only its existing VIA Raw HID collection and
+  validates the protocol-v1 checksum, status and measurement validity. Over Bluetooth it
+  passively reads the hardware-confirmed seven-byte Consumer beacon from the K2 Pro's
+  `000c:0001` collection; `0a 61 03 00 00 00 00` reported 97% on Windows 11, followed by
+  the expected release. Unknown values stay unknown, stale USB readings are greyed, and
+  charging remains unknown because USB power does not prove charging.
 - **LAMZU Atlantis Mini** on its older `25A7:FA7C` 2.4 GHz receiver, using
   paired CompX feature/input collections identified from the owner's probe.
   This is isolated from the existing Maya X and Thorn transports; battery

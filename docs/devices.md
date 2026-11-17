@@ -33,6 +33,7 @@
 | [HyperX Cloud III S Wireless](protocols.md#hyperx-cloud-iii-s-wireless) | 2.4 GHz dongle | yes |
 | [HyperX Cloud III Wireless](protocols.md#hyperx-cloud-iii-wireless) | 2.4 GHz dongle | no |
 | [JBL Quantum 910 Wireless](protocols.md#jbl-quantum-910-wireless) | 2.4 GHz dongle | yes |
+| [Keychron K2 Pro ANSI RGB](protocols.md#keychron-k2-pro-ansi-rgb) | Bluetooth or USB with the battery-reporting QMK firmware | Bluetooth beacon and USB confirmed |
 | [Keychron Ultra-Link 8K, Keychron M5](protocols.md#keychron-ultra-link-8k-keychron-m5) | 2.4 GHz receiver and USB cable | no |
 | [LAMZU Maya X](protocols.md#lamzu-maya-x) | 8K dongle or USB cable | yes |
 | [LAMZU Atlantis Mini](protocols.md#lamzu-atlantis-mini-older-24-ghz-receiver) | Older 2.4 GHz receiver (25A7:FA7C) | detection confirmed here; battery reading pending |

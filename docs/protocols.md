@@ -424,6 +424,32 @@ than waking an idle keyboard; a failed listener also leaves queries paused.
 No protocol or sleep-setting writes are introduced. Physical sleep still needs
 an idle test on the keyboard; absence of battery requests alone is not a power measurement.
 
+### Keychron K2 Pro ANSI RGB
+
+**Connection:** USB cable (`3434:0220`) with the target-specific battery-reporting QMK firmware
+
+The existing VIA Raw HID collection (`ff60:0061`) carries a 32-byte protocol-v1 request,
+`ac 01 01 00 ... ae 00`, prefixed with report ID zero for hidapi. The `ac 81` response
+contains percentage, voltage, measurement validity and age, transport and USB/Bluetooth
+state. Halo Battery checks its exact size, version, status, payload length and 16-bit
+additive checksum before using it. Unknown measurements remain unknown (so the firmware's
+pre-measurement placeholder cannot appear as 100%); values outside 0..100 are refused and
+stale cached values are greyed. The firmware exposes USB power sense but not charger state,
+so charging is deliberately unknown. The command and layout come from the supplied
+`battery_report.c` implementation and `BATTERY_PROTOCOL.md`; the patch reserves `0xac` for
+this protocol while leaving VIA commands and Keychron's `0xaa`/`0xab` handlers intact.
+Only PID `0220` and the VIA collection are opened. Over Bluetooth Classic, Halo Battery
+passively listens to the hardware-confirmed Consumer Control collection (`000c:0001`,
+Bluetooth HID UUID `1124`, `Col03`) without opening or writing to it. A seven-byte report
+`0a <usage-le16> 00 00 00 00` carries battery-only usages `0300..0364` or USB-powered
+usages `0380..03e4`; the following usage zero is a release and does not clear the reading.
+The listener strictly matches the confirmed K2 Pro Bluetooth path (`VID 3434`, PID `0220`,
+`Col03`), ignores ordinary media usages, and expires a reading after six minutes (the
+firmware refreshes an unchanged value every five). New beacons wake the app poll loop.
+Confirmed on a real K2 Pro and Windows 11: `0a 61 03 00 00 00 00` reported 97%, followed
+by `0a 00 00 00 00 00 00`. Charging remains unknown because the beacon's USB-power range
+does not prove that the battery is charging.
+
 ### Keychron Ultra-Link 8K, Keychron M5
 
 **Connection:** 2.4 GHz receiver (3434:D028) and USB cable (3434:D048)
