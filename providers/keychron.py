@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import time
 from dataclasses import dataclass
+from time import monotonic
 from typing import List, Optional
 
 import hid
@@ -67,6 +68,7 @@ K2_PAYLOAD_SIZE = 13
 K2_PERCENT_VALID = 0x0010
 K2_VALID = 1
 K2_STALE = 2
+K2_QUERY_INTERVAL_S = 60.0
 
 PIDS = {
     0xD028: "Keychron Ultra-Link 8K",
@@ -150,6 +152,8 @@ class KeychronProvider(Provider):
         self._diag: List[str] = []
         self.bluetooth = (bluetooth_listener if bluetooth_listener is not None
                           else KeychronBluetoothListener())
+        self._k2_last_query: Optional[float] = None
+        self._k2_cached: Optional[K2Reading] = None
 
     def _pick(self, infos: List[dict]) -> Optional[dict]:
         for d in infos:
@@ -169,6 +173,14 @@ class KeychronProvider(Provider):
         return infos[0] if infos else None
 
     def _query_k2(self, path: bytes) -> Optional[K2Reading]:
+        now = monotonic()
+        if (self._k2_last_query is not None
+                and 0 <= now - self._k2_last_query < K2_QUERY_INTERVAL_S):
+            self._diag.append(f"  USB query rate-limited; cached reading "
+                              f"({K2_QUERY_INTERVAL_S - (now - self._k2_last_query):.0f} s left)")
+            return self._k2_cached
+        # Set this before I/O: failures and device removal are rate-limited too.
+        self._k2_last_query = now
         dev = hid.device()
         try:
             dev.open_path(path)
@@ -186,6 +198,7 @@ class KeychronProvider(Provider):
                 self._diag.append(f"  attempt {attempt + 1} reply: {hexdump(report)}")
                 parsed = parse_k2_reply(report)
                 if parsed is not None:
+                    self._k2_cached = parsed
                     return parsed
             self._diag.append("  no valid K2 Pro protocol response")
             return None
