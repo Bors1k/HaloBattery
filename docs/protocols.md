@@ -261,7 +261,13 @@ Claimed from [#304](https://github.com/HeyOkay/HaloBattery/issues/304)'s collect
 
 **Connection:** 8K dongle (373E:001E) or USB cable (373E:001C)
 
-The same feature report exchange as the WLmouse and G-Wolves mice (`00 00 02 02 00 83` out, `a1 00 02 02 00 83 <charging> <battery %>` back), on the vendor collection `ffff:0000` of interface 2 only; protocol from Sheroune/lamzu-battery-monitory (MIT). Confirmed on a Maya X on its 8K dongle
+The same feature report exchange as the WLmouse and G-Wolves mice (`00 00 02 02 00 83` out, `a1 00 02 02 00 83 <charging> <battery %>` back), on the vendor collection `ffff:0000` of interface 2 only; protocol from Sheroune/lamzu-battery-monitory (MIT). Confirmed on a Maya X on its 8K dongle.
+
+### LAMZU Atlantis Mini (older 2.4 GHz receiver)
+
+**Connection:** 2.4 GHz receiver (25A7:FA7C)
+
+This Atlantis Mini receiver was identified by its owner's `--probe` output, including command collection `ff02:0002` and reply collection `ff01:0000`. It uses the documented Areson/CompX variant: feature request `08 04`, input reply `09 04`, carrying percentage, charging state and voltage. Sources are FerrisPulse PR #55 (exact collections, frame and battery fields) and the hardware-tested pulsar-mouse-linux PRs #10 and #23 (same VID/PID, protocol and `09` reply). Values outside 0–100 and frames with a bad checksum are refused. This is a separate code path and does not change the existing Maya X or Thorn transports.
 
 ### MCHOSE A5 Pro Max
 

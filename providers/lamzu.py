@@ -13,13 +13,12 @@ Nothing else is ever written to the mouse. The request and the reply parser are
 the ones in wlmouse.py. The dongle cannot tell a sleeping mouse from one that is
 switched off, so a silent mouse keeps its last level, greyed out, for a while.
 
-The Maya X uses a feature-report protocol on VID 0x373E. The Thorn / Atlantis
-generation is a separate LAMZU family on CompX VID 0x3554; it uses report-8
-interrupt frames, shared at the protocol level with some Pulsar/ATK/VXE devices.
-Both families are handled here under LAMZU device ownership. Source for the
-Atlantis family and its CompX protocol: OpenMouse-Project/mouse-protocol
-[PR #85](https://github.com/OpenMouse-Project/mouse-protocol/pull/85), cross-checked
-against the Thorn's HID diagnostics and live readings.
+The Maya X uses a feature-report protocol on VID 0x373E. The Thorn generation is
+a separate LAMZU family on CompX VID 0x3554; it uses report-8 interrupt frames,
+shared at the protocol level with some Pulsar/ATK/VXE devices. Both families are
+handled here under LAMZU device ownership. Source for the CompX protocol:
+OpenMouse-Project/mouse-protocol PR #85, cross-checked against the Thorn's HID
+diagnostics and live readings.
 """
 from __future__ import annotations
 
@@ -36,8 +35,9 @@ from .base import DeviceStatus, Provider, hexdump, log
 from .wlmouse import QUERY, parse_feature
 from .compx import (CONTROL_USAGE as COMPX_CONTROL_USAGE, PAYLOAD_LEN as COMPX_PAYLOAD_LEN,
                     READ_ATTEMPTS as COMPX_READ_ATTEMPTS, READ_TIMEOUT_MS as COMPX_READ_TIMEOUT_MS,
-                    make_request as compx_make_request, output_length as compx_output_length,
-                    parse_power as compx_parse_power, voltage_mv as compx_voltage_mv)
+                    checksum as compx_checksum, make_request as compx_make_request,
+                    output_length as compx_output_length, parse_power as compx_parse_power,
+                    voltage_mv as compx_voltage_mv)
 
 LAMZU_VID = 0x373E
 DONGLE = 0x001E
@@ -147,9 +147,8 @@ class LamzuProvider(Provider):
         return list(self._diag)
 
 
-# The Thorn / Atlantis family uses CompX's report-8 protocol, not the Maya X's
-# feature-report command. Keep its product ownership and lifecycle in the Lamzu
-# provider while reusing the shared CompX frame builder/parser.
+# The Thorn family uses CompX's report-8 protocol, not the Maya X's
+# feature-report command. Keep its existing IDs, names and lifecycle unchanged.
 COMPX_VID = 0x3554
 ATLANTIS_PIDS = {
     0xF510: "LAMZU Thorn (4K receiver)",
@@ -158,6 +157,15 @@ ATLANTIS_PIDS = {
 THORN_KEY = "lamzu:3554f510"
 THORN_ASLEEP_KEEP = 300
 
+# Older Atlantis Mini receivers use the widely shared Areson/CompX identity.
+# FerrisPulse PR #55 and pulsar-mouse-linux PRs #10/#23 document this exact
+# transport: feature report 08 04 on ff02:0002, input reply 09 04 on ff01:0000.
+ARESON_VID = 0x25A7
+ARESON_DONGLE = 0xFA7C
+ARESON_KEY = "lamzu:25a7fa7c"
+ARESON_COMMAND_USAGE = (0xFF02, 0x0002)
+ARESON_REPLY_USAGE = (0xFF01, 0x0000)
+
 
 class LamzuAtlantisProvider(Provider):
     name = "lamzu"
@@ -165,6 +173,7 @@ class LamzuAtlantisProvider(Provider):
     def __init__(self):
         self._diag: List[str] = []
         self._last: Optional[Tuple[str, int, bool, float]] = None
+        self._areson_last: Optional[Tuple[str, int, bool, float]] = None
 
     def _pick_compx(self, infos: List[dict]) -> Optional[dict]:
         control = [d for d in infos if (d.get("usage_page"), d.get("usage")) == COMPX_CONTROL_USAGE]
@@ -175,6 +184,50 @@ class LamzuAtlantisProvider(Provider):
             self._diag.append(f"  {d.get('usage_page', 0):04x}:{d.get('usage', 0):04x} "
                               f"output={size} cannot take a {COMPX_PAYLOAD_LEN}-byte frame; skipped")
         return infos[0] if infos else None
+
+    def _query_areson(self, infos: List[dict]):
+        command = next((d for d in infos if (d.get("usage_page"), d.get("usage")) ==
+                        ARESON_COMMAND_USAGE), None)
+        replies = next((d for d in infos if (d.get("usage_page"), d.get("usage")) ==
+                        ARESON_REPLY_USAGE), None)
+        if command is None or replies is None:
+            self._diag.append("  needs ff02:0002 command and ff01:0000 reply collections")
+            return None
+        opened = []
+        try:
+            for d in (replies, command):
+                dev = hid.device()
+                dev.open_path(d["path"])
+                opened.append(dev)
+            reader, writer = opened
+            for _ in range(4):
+                if not reader.read(COMPX_PAYLOAD_LEN, 30):
+                    break
+            sent = writer.send_feature_report(bytes(compx_make_request()))
+            if sent is not None and sent < 0:
+                self._diag.append(f"  feature write refused ({sent})")
+                return None
+            for attempt in range(COMPX_READ_ATTEMPTS):
+                r = reader.read(COMPX_PAYLOAD_LEN, COMPX_READ_TIMEOUT_MS)
+                if not r:
+                    break
+                self._diag.append(f"  reply {attempt + 1}: {hexdump(r)}")
+                frame = list(r[:COMPX_PAYLOAD_LEN])
+                if (len(frame) == COMPX_PAYLOAD_LEN and frame[0] == 0x09 and
+                        frame[1] == 0x04 and
+                        frame[-1] == compx_checksum(frame[:-1]) and
+                        0 <= frame[6] <= 100):
+                    return list(r), (frame[6], frame[7] != 0)
+            self._diag.append("  no valid 09 04 power reply")
+        except (OSError, IOError, ValueError) as e:
+            self._diag.append(f"  query error: {e}")
+        finally:
+            for dev in opened:
+                try:
+                    dev.close()
+                except Exception:
+                    pass
+        return None
 
     def _query_compx(self, path: bytes):
         dev = hid.device()
@@ -209,16 +262,39 @@ class LamzuAtlantisProvider(Provider):
 
     def poll(self) -> List[DeviceStatus]:
         self._diag = []
+        if hid is None:
+            return []
         try:
+            areson = [d for d in hidlist.enumerate(ARESON_VID)
+                      if d.get("product_id") == ARESON_DONGLE]
             infos = [d for d in hidlist.enumerate(COMPX_VID)
                      if d.get("product_id") in ATLANTIS_PIDS]
         except Exception as e:  # pragma: no cover
             log.warning("hid.enumerate(lamzu atlantis): %s", e)
             return []
+        now = time.time()
+        if areson:
+            name = "LAMZU Atlantis Mini (2.4 GHz receiver)"
+            self._diag.append(f"[Lamzu Atlantis] pid={ARESON_VID:04x}:{ARESON_DONGLE:04x} "
+                              f"'{(areson[0].get('product_string') or '').strip()}'")
+            result = self._query_areson(areson)
+            if result is not None:
+                raw, (level, charging) = result
+                mv = compx_voltage_mv(raw)
+                if mv:
+                    self._diag.append(f"  {mv} mV")
+                self._areson_last = (name, level, charging, now)
+                return [DeviceStatus(ARESON_KEY, name, level, charging, True, "lamzu",
+                                     kind="mouse")]
+            if self._areson_last and now - self._areson_last[3] < THORN_ASLEEP_KEEP:
+                name, level, charging, _seen = self._areson_last
+                return [DeviceStatus(ARESON_KEY, name, level, charging, False, "lamzu",
+                                     kind="mouse", wake_on_input=True)]
+        else:
+            self._areson_last = None
         groups: Dict[int, List[dict]] = {}
         for d in infos:
             groups.setdefault(d["product_id"], []).append(d)
-        now = time.time()
         present = bool(groups)
         # Ask the cable first; its power flag is how the report signals charging.
         for pid in sorted(groups, key=lambda p: p != 0xF50F):

@@ -67,6 +67,7 @@ class AtlantisProviderTest(unittest.TestCase):
         self.sent = []
         self.replies = []
         self.entries = []
+        self.feature_sent = False
         L.compx_output_length = lambda _path: None
 
         owner = self
@@ -75,9 +76,13 @@ class AtlantisProviderTest(unittest.TestCase):
                 self.path = path
                 self.sent_request = False
             def read(self, length, timeout=0):
-                if self.sent_request and owner.replies:
+                if (self.sent_request or owner.feature_sent) and owner.replies:
                     return owner.replies.pop(0)
                 return b""
+            def send_feature_report(self, frame):
+                owner.sent.append((self.path, list(frame)))
+                owner.feature_sent = True
+                return len(frame)
             def write(self, frame):
                 owner.sent.append((self.path, list(frame)))
                 self.sent_request = True
@@ -86,8 +91,8 @@ class AtlantisProviderTest(unittest.TestCase):
                 pass
         self.device = FakeDevice
         L.hid = types.SimpleNamespace(device=lambda: self.device())
-        L.hidlist = types.SimpleNamespace(enumerate=lambda vid: list(self.entries)
-                                          if vid == L.COMPX_VID else [])
+        L.hidlist = types.SimpleNamespace(
+            enumerate=lambda vid: [d for d in self.entries if d["vendor_id"] == vid])
 
     def tearDown(self):
         L.hid, L.hidlist, L.compx_output_length = self._saved
@@ -100,14 +105,36 @@ class AtlantisProviderTest(unittest.TestCase):
             self.entries.append({"vendor_id": L.COMPX_VID, "product_id": pid,
                                  "interface_number": iface, "usage_page": page,
                                  "usage": usage, "path": f"{prefix}-{n}".encode(),
-                                 "product_string": "LAMZU THORN"})
+                                 "product_string": "LAMZU Atlantis Pro"})
+
+    def add_areson_dongle(self):
+        shapes = [(0, 0x0001, 0x0002), (1, 0x0001, 0x0080), (1, 0xFF01, 0),
+                  (1, 0xFF04, 2), (1, 0xFF02, 2), (1, 0xFF03, 0),
+                  (1, 0x0001, 0x0006), (1, 0x000C, 1)]
+        for n, (iface, page, usage) in enumerate(shapes):
+            self.entries.append({"vendor_id": L.ARESON_VID, "product_id": L.ARESON_DONGLE,
+                                 "interface_number": iface, "usage_page": page,
+                                 "usage": usage, "path": f"areson-{n}".encode(),
+                                 "product_string": "2.4G Wireless Receiver"})
 
     @staticmethod
-    def power_reply(level, charging=0, millivolts=0):
-        frame = [0x08, 0x04, 0, 0, 0, 2, level, charging]
+    def power_reply(level, charging=0, millivolts=0, header=0x08):
+        frame = [header, 0x04, 0, 0, 0, 2, level, charging]
         frame += list(millivolts.to_bytes(2, "big")) + [0] * 6
         frame.append((0x55 - sum(frame)) & 0xFF)
         return bytes(frame)
+
+    def test_atlantis_mini_areson_receiver_uses_paired_collections(self):
+        self.add_areson_dongle()
+        self.replies = [self.power_reply(73, 0, 3975, header=0x09)]
+        found = L.LamzuAtlantisProvider().poll()
+        self.assertEqual(
+            [("lamzu:25a7fa7c", "LAMZU Atlantis Mini (2.4 GHz receiver)", 73, False)],
+            [(s.key, s.name, s.level, s.charging) for s in found])
+        self.assertEqual(1, len(self.sent))
+        path, frame = self.sent[0]
+        self.assertTrue(path.startswith(b"areson-"))
+        self.assertEqual((0x08, 0x04), tuple(frame[:2]))
 
     def test_thorn_4k_receiver_is_reported_as_lamzu(self):
         self.add_mouse(0xF510, "receiver")

@@ -8,6 +8,10 @@ and the project follows [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **LAMZU Atlantis Mini** on its older `25A7:FA7C` 2.4 GHz receiver, using
+  paired CompX feature/input collections identified from the owner's probe.
+  This is isolated from the existing Maya X and Thorn transports; battery
+  confirmation on the Atlantis Mini is pending.
 - **Razer Barracuda X Chroma** (`1532:0574`, 2.4 GHz receiver) battery level and
   charging state through its captured MediaTek HID protocol. A Synapse USBPcap
   capture returned 96% and not charging. Confirmed on the headset with `--probe`:
